@@ -284,6 +284,9 @@ class NodeRuntime(context: Context) {
   val manualHost: StateFlow<String> = prefs.manualHost
   val manualPort: StateFlow<Int> = prefs.manualPort
   val manualTls: StateFlow<Boolean> = prefs.manualTls
+  val manualUseCloudflareAccess: StateFlow<Boolean> = prefs.manualUseCloudflareAccess
+  val manualCloudflareClientId: StateFlow<String> = prefs.manualCloudflareClientId
+  val manualCloudflareClientSecret: StateFlow<String> = prefs.manualCloudflareClientSecret
   val lastDiscoveredStableId: StateFlow<String> = prefs.lastDiscoveredStableId
   val canvasDebugStatusEnabled: StateFlow<Boolean> = prefs.canvasDebugStatusEnabled
 
@@ -428,6 +431,18 @@ class NodeRuntime(context: Context) {
     prefs.setManualTls(value)
   }
 
+  fun setManualUseCloudflareAccess(value: Boolean) {
+    prefs.setManualUseCloudflareAccess(value)
+  }
+
+  fun setManualCloudflareClientId(value: String) {
+    prefs.setManualCloudflareClientId(value)
+  }
+
+  fun setManualCloudflareClientSecret(value: String) {
+    prefs.setManualCloudflareClientSecret(value)
+  }
+
   fun setCanvasDebugStatusEnabled(value: Boolean) {
     prefs.setCanvasDebugStatusEnabled(value)
   }
@@ -565,8 +580,12 @@ class NodeRuntime(context: Context) {
     val token = prefs.loadGatewayToken()
     val password = prefs.loadGatewayPassword()
     val tls = resolveTlsParams(endpoint)
-    operatorSession.connect(endpoint, token, password, buildOperatorConnectOptions(), tls)
-    nodeSession.connect(endpoint, token, password, buildNodeConnectOptions(), tls)
+    val isManual = endpoint.stableId.startsWith("manual|")
+    val useCloudflareAccess = if (isManual) manualUseCloudflareAccess.value else false
+    val cfClientId = if (isManual && useCloudflareAccess) manualCloudflareClientId.value else null
+    val cfClientSecret = if (isManual && useCloudflareAccess) manualCloudflareClientSecret.value else null
+    operatorSession.connect(endpoint, token, password, buildOperatorConnectOptions(), tls, useCloudflareAccess, cfClientId, cfClientSecret)
+    nodeSession.connect(endpoint, token, password, buildNodeConnectOptions(), tls, useCloudflareAccess, cfClientId, cfClientSecret)
   }
 
   private fun hasRecordAudioPermission(): Boolean {

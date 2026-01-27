@@ -74,6 +74,18 @@ class SecurePrefs(context: Context) {
     MutableStateFlow(readBoolWithMigration("gateway.manual.tls", null, true))
   val manualTls: StateFlow<Boolean> = _manualTls
 
+  private val _manualUseCloudflareAccess =
+    MutableStateFlow(prefs.getBoolean("gateway.manual.cloudflare.enabled", false))
+  val manualUseCloudflareAccess: StateFlow<Boolean> = _manualUseCloudflareAccess
+
+  private val _manualCloudflareClientId =
+    MutableStateFlow(prefs.getString("gateway.manual.cloudflare.clientId", "") ?: "")
+  val manualCloudflareClientId: StateFlow<String> = _manualCloudflareClientId
+
+  private val _manualCloudflareClientSecret =
+    MutableStateFlow(prefs.getString("gateway.manual.cloudflare.clientSecret", "") ?: "")
+  val manualCloudflareClientSecret: StateFlow<String> = _manualCloudflareClientSecret
+
   private val _lastDiscoveredStableId =
     MutableStateFlow(
       readStringWithMigration(
@@ -148,6 +160,23 @@ class SecurePrefs(context: Context) {
   fun setManualTls(value: Boolean) {
     prefs.edit { putBoolean("gateway.manual.tls", value) }
     _manualTls.value = value
+  }
+
+  fun setManualUseCloudflareAccess(value: Boolean) {
+    prefs.edit { putBoolean("gateway.manual.cloudflare.enabled", value) }
+    _manualUseCloudflareAccess.value = value
+  }
+
+  fun setManualCloudflareClientId(value: String) {
+    val trimmed = value.trim()
+    prefs.edit { putString("gateway.manual.cloudflare.clientId", trimmed) }
+    _manualCloudflareClientId.value = trimmed
+  }
+
+  fun setManualCloudflareClientSecret(value: String) {
+    val trimmed = value.trim()
+    prefs.edit { putString("gateway.manual.cloudflare.clientSecret", trimmed) }
+    _manualCloudflareClientSecret.value = trimmed
   }
 
   fun setCanvasDebugStatusEnabled(value: Boolean) {

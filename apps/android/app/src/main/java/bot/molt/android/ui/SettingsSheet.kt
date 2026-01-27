@@ -82,6 +82,9 @@ fun SettingsSheet(viewModel: MainViewModel) {
   val manualHost by viewModel.manualHost.collectAsState()
   val manualPort by viewModel.manualPort.collectAsState()
   val manualTls by viewModel.manualTls.collectAsState()
+  val manualUseCloudflareAccess by viewModel.manualUseCloudflareAccess.collectAsState()
+  val manualCloudflareClientId by viewModel.manualCloudflareClientId.collectAsState()
+  val manualCloudflareClientSecret by viewModel.manualCloudflareClientSecret.collectAsState()
   val canvasDebugStatusEnabled by viewModel.canvasDebugStatusEnabled.collectAsState()
   val statusText by viewModel.statusText.collectAsState()
   val serverName by viewModel.serverName.collectAsState()
@@ -409,6 +412,30 @@ fun SettingsSheet(viewModel: MainViewModel) {
             trailingContent = { Switch(checked = manualTls, onCheckedChange = viewModel::setManualTls, enabled = manualEnabled) },
             modifier = Modifier.alpha(if (manualEnabled) 1f else 0.5f),
           )
+
+          ListItem(
+            headlineContent = { Text("Use Cloudflare Access") },
+            supportingContent = { Text("Add Cloudflare Access headers for tunnel connections.") },
+            trailingContent = { Switch(checked = manualUseCloudflareAccess, onCheckedChange = viewModel::setManualUseCloudflareAccess, enabled = manualEnabled) },
+            modifier = Modifier.alpha(if (manualEnabled) 1f else 0.5f),
+          )
+
+          if (manualUseCloudflareAccess) {
+            OutlinedTextField(
+              value = manualCloudflareClientId,
+              onValueChange = viewModel::setManualCloudflareClientId,
+              label = { Text("CF Access Client ID") },
+              modifier = Modifier.fillMaxWidth(),
+              enabled = manualEnabled,
+            )
+            OutlinedTextField(
+              value = manualCloudflareClientSecret,
+              onValueChange = viewModel::setManualCloudflareClientSecret,
+              label = { Text("CF Access Client Secret") },
+              modifier = Modifier.fillMaxWidth(),
+              enabled = manualEnabled,
+            )
+          }
 
           val hostOk = manualHost.trim().isNotEmpty()
           val portOk = manualPort in 1..65535

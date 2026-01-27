@@ -93,6 +93,9 @@ class GatewaySession(
     val password: String?,
     val options: GatewayConnectOptions,
     val tls: GatewayTlsParams?,
+    val useCloudflareAccess: Boolean = false,
+    val cfClientId: String? = null,
+    val cfClientSecret: String? = null,
   )
 
   private var desired: DesiredConnection? = null
@@ -105,8 +108,11 @@ class GatewaySession(
     password: String?,
     options: GatewayConnectOptions,
     tls: GatewayTlsParams? = null,
+    useCloudflareAccess: Boolean = false,
+    cfClientId: String? = null,
+    cfClientSecret: String? = null,
   ) {
-    desired = DesiredConnection(endpoint, token, password, options, tls)
+    desired = DesiredConnection(endpoint, token, password, options, tls, useCloudflareAccess, cfClientId, cfClientSecret)
     if (job == null) {
       job = scope.launch(Dispatchers.IO) { runLoop() }
     }
@@ -174,6 +180,9 @@ class GatewaySession(
     private val password: String?,
     private val options: GatewayConnectOptions,
     private val tls: GatewayTlsParams?,
+    private val useCloudflareAccess: Boolean = false,
+    private val cfClientId: String? = null,
+    private val cfClientSecret: String? = null,
   ) {
     private val connectDeferred = CompletableDeferred<Unit>()
     private val closedDeferred = CompletableDeferred<Unit>()
@@ -192,7 +201,15 @@ class GatewaySession(
 
     suspend fun connect() {
       val scheme = if (tls != null) "wss" else "ws"
-      val url = "$scheme://${endpoint.host}:${endpoint.port}"
+      // Use WebSocket path for Cloudflare Tunnel (port 443 + TLS)
+      val path = if (tls != null && endpoint.port == 443) {
+        "/ws"
+      } else {
+        ""
+      }
+      val url = "$scheme://${endpoint.host}:${endpoint.port}$path"
+      Log.d(loggerTag, "Connecting to: $url")
+      Log.d(loggerTag, "Using Cloudflare Access: $useCloudflareAccess")
       val request = Request.Builder().url(url).build()
       socket = client.newWebSocket(request, Listener())
       try {
@@ -241,6 +258,24 @@ class GatewaySession(
 
     private fun buildClient(): OkHttpClient {
       val builder = OkHttpClient.Builder()
+
+      // Add Cloudflare Access header support for HTTPS connections
+      builder.addInterceptor { chain ->
+        val originalRequest = chain.request()
+        val requestBuilder = originalRequest.newBuilder()
+
+        // Detect Cloudflare Tunnel by port and TLS
+        if (useCloudflareAccess && (endpoint.port == 443 || (tls != null && endpoint.port == 443))) {
+          if (!cfClientId.isNullOrBlank() && !cfClientSecret.isNullOrBlank()) {
+            requestBuilder.addHeader("CF-Access-Client-Id", cfClientId)
+            requestBuilder.addHeader("CF-Access-Client-Secret", cfClientSecret)
+            Log.d(loggerTag, "Added Cloudflare Access headers")
+          }
+        }
+
+        chain.proceed(requestBuilder.build())
+      }
+
       val tlsConfig = buildGatewayTlsConfig(tls) { fingerprint ->
         onTlsFingerprint?.invoke(tls?.stableId ?: endpoint.stableId, fingerprint)
       }
@@ -570,7 +605,16 @@ class GatewaySession(
   }
 
   private suspend fun connectOnce(target: DesiredConnection) = withContext(Dispatchers.IO) {
-    val conn = Connection(target.endpoint, target.token, target.password, target.options, target.tls)
+    val conn = Connection(
+      target.endpoint,
+      target.token,
+      target.password,
+      target.options,
+      target.tls,
+      target.useCloudflareAccess,
+      target.cfClientId,
+      target.cfClientSecret,
+    )
     currentConnection = conn
     try {
       conn.connect()
