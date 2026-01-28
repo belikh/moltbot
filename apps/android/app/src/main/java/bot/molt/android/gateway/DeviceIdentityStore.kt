@@ -137,42 +137,6 @@ class DeviceIdentityStore(context: Context) {
     return Base64.encodeToString(data, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
   }
 
-  fun saveCloudflareCredentials(clientId: String, clientSecret: String) {
-    try {
-      val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
-      cfFile.parentFile?.mkdirs()
-      val credentials = mapOf("clientId" to clientId, "clientSecret" to clientSecret)
-      val encoded = json.encodeToString(MapSerializer(String.serializer(), String.serializer()), credentials)
-      cfFile.writeText(encoded, Charsets.UTF_8)
-    } catch (_: Throwable) {
-      // best-effort only
-    }
-  }
-
-  fun getCloudflareToken(): String? {
-    return try {
-      val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
-      if (!cfFile.exists()) return null
-      val raw = cfFile.readText(Charsets.UTF_8)
-      val decoded = json.decodeFromString<Map<String, String>>(MapSerializer(String.serializer(), String.serializer()), raw)
-      decoded["clientSecret"]
-    } catch (_: Throwable) {
-      null
-    }
-  }
-
-  fun getCloudflareClientId(): String? {
-    return try {
-      val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
-      if (!cfFile.exists()) return null
-      val raw = cfFile.readText(Charsets.UTF_8)
-      val decoded = json.decodeFromString<Map<String, String>>(MapSerializer(String.serializer(), String.serializer()), raw)
-      decoded["clientId"]
-    } catch (_: Throwable) {
-      null
-    }
-  }
-
   companion object {
     private val ED25519_SPKI_PREFIX =
       byteArrayOf(
