@@ -9,8 +9,6 @@ import java.security.MessageDigest
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 @Serializable
@@ -144,7 +142,7 @@ class DeviceIdentityStore(context: Context) {
       val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
       cfFile.parentFile?.mkdirs()
       val credentials = mapOf("clientId" to clientId, "clientSecret" to clientSecret)
-      val encoded = json.encodeToString(mapSerializer(stringSerializer, stringSerializer), credentials)
+      val encoded = json.encodeToString(MapSerializer(String.serializer(), String.serializer()), credentials)
       cfFile.writeText(encoded, Charsets.UTF_8)
     } catch (_: Throwable) {
       // best-effort only
@@ -156,7 +154,7 @@ class DeviceIdentityStore(context: Context) {
       val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
       if (!cfFile.exists()) return null
       val raw = cfFile.readText(Charsets.UTF_8)
-      val decoded = json.decodeFromString(mapSerializer(stringSerializer, stringSerializer), raw)
+      val decoded = json.decodeFromString<Map<String, String>>(MapSerializer(String.serializer(), String.serializer()), raw)
       decoded["clientSecret"]
     } catch (_: Throwable) {
       null
@@ -168,7 +166,7 @@ class DeviceIdentityStore(context: Context) {
       val cfFile = File(context.filesDir, "moltbot/cloudflare/credentials.json")
       if (!cfFile.exists()) return null
       val raw = cfFile.readText(Charsets.UTF_8)
-      val decoded = json.decodeFromString(mapSerializer(stringSerializer, stringSerializer), raw)
+      val decoded = json.decodeFromString<Map<String, String>>(MapSerializer(String.serializer(), String.serializer()), raw)
       decoded["clientId"]
     } catch (_: Throwable) {
       null
